@@ -1,6 +1,8 @@
 import sys, os, time
 import json
 import pickle
+from skimage import io
+from PIL import Image
 
 import numpy as np
 
@@ -8,6 +10,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 import torchvision
+
+from pycocotools.coco import COCO
 
 
 class Dictionary():
@@ -82,9 +86,41 @@ class VisualGenomeDataset(Dataset):
         return {"image" : image, "reg" : im_reginfo}
 
 
+"""
+coco dataset.
+root_dir :  root directory of dataset
+ann_dir :   relative directory of annotations
+mode :      train, val, or test
+transform : contain transformations for images (torchvision.Transforms)
+"""
+class COCODataset(Dataset):
+    def __init__(self, root_dir="../../dsets/coco/", ann_dir="annotations/", mode="train", transform=None):
+        mod = mode + "2014"
+        self.imgdir = os.path.join(root_dir, mod)
+        anndir = os.path.join(root_dir, ann_dir, "captions_{}.json".format(mod))
+        self.api = COCO(anndir)
+        self.imgids = self.api.getImgIds()
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.imgids)
+
+    def __getitem__(self, idx):
+        imgid = self.imgids[idx]
+        img = self.api.loadImgs(imgid)[0]
+        impath = os.path.join(self.imgdir, os.path.basename(img["coco_url"]))
+        image = Image.open(impath)
+        annid = self.api.getAnnIds(imgid)
+        anns = self.api.loadAnns(annid)[0]["caption"]
+        if self.transform is not None:
+            image = self.transform(image)
+        sample = {'image' : image, 'caption' : anns}
+        return sample
 
 
-
+if __name__ == '__main__':
+    c = COCODataset()
+    print(c[0])
 
 
 

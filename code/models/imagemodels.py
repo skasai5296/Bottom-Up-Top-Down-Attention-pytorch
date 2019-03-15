@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-class Faster_r_cnn(nn.Module):
+class YOLO(nn.Module):
     def __init__(self):
         super(Faster_r_cnn, self).__init__()
         self.model = []
