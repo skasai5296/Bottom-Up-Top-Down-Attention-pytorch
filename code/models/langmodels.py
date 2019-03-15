@@ -14,7 +14,7 @@ class Dictionary():
 
 
 class Captioning(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, feature_dim, hidden, memdim):
+    def __init__(self, vocab_size, embedding_dim, feature_dim, memdim, hidden=256):
         super(Captioning, self).__init__()
 
         self.vocab_size = vocab_size
