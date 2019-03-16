@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class YOLO(nn.Module):
     def __init__(self):
-        super(Faster_r_cnn, self).__init__()
+        super(YOLO, self).__init__()
         self.model = []
 
     def forward(self, x):
