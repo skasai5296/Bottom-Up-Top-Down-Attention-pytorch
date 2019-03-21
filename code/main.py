@@ -56,6 +56,9 @@ def main(args):
     mseloss = nn.MSELoss()
     bceloss = nn.BCELoss()
     celoss = nn.CrossEntropyLoss()
+
+    print('begin training')
+
     for i in range(args.epochs):
         for it, sample in enumerate(trainloader):
             print(sample)
