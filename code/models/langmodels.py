@@ -1,20 +1,47 @@
 import torch
 import torch.nn as nn
 
+import sys, os, time, collections
 
 
 class Dictionary():
-    def __init__(self, word2idx=None, idx2word=None):
+    def __init__(self, word2idx=None, idx2word=None, threshold=5):
         if word2idx is None:
             word2idx = {}
         if idx2word is None:
             idx2word = []
         self.word2idx = word2idx
         self.idx2word = idx2word
+        self.special = {'<BOS>': threshold, '<EOS>': threshold, '<NUM>': threshold, '<UNK>': threshold}
+        self.counter = collections.Counter(self.special)
+        self.threshold = threshold
+        self.i = 0
+
+    def __len__(self):
+        return self.i
+
+    def create_vocab(self, file):
+        print('creating dictionary', flush=True)
+        before = time.time()
+        stripchars = ".!?,-:;[](){}@#$%^&* \"_=+|/<>`~"
+        with open(file, 'r') as f:
+            for line in f:
+                tokens = line.split()
+                tokens = [token.lower().strip(stripchars) for token in tokens]
+                for token in tokens:
+                    if token.isdigit():
+                        continue
+                    self.counter[token] += 1
+        for token, val in self.counter.items():
+            if val >= self.threshold:
+                self.word2idx[token] = self.i
+                self.idx2word.append(token)
+                self.i += 1
+        print('created dictionary, {} tokens within, {}s taken'.format(self.i, time.time()-before), flush=True)
 
 
 class Captioning(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, feature_dim, memdim, hidden=256):
+    def __init__(self, vocab_size, embedding_dim=512, feature_dim=512, memdim=512, hidden=256):
         super(Captioning, self).__init__()
 
         self.vocab_size = vocab_size

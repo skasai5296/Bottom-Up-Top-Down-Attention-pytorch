@@ -84,6 +84,8 @@ root_dir :  root directory of dataset
 ann_dir :   relative directory of annotations
 mode :      train, val, or test
 transform : contain transformations for images (torchvision.Transforms)
+
+returns {'image' : PIL Image, 'caption' : string, 'bboxinfo' : [{'image_id' : integer index of image, 'obj_id' : integer index of object, 'bbox' : list containing xywh of bounding box}, ...] }
 """
 class COCODataset(Dataset):
     def __init__(self, root_dir="../../dsets/coco/", ann_dir="annotations/", mode="train", transform=None):
@@ -111,7 +113,10 @@ class COCODataset(Dataset):
 
     def __getitem__(self, idx):
         imgid = self.imgids[idx]
-        info = [i for i in self.bboxes if i['image_id'] == imgid]
+        info = []
+        for i in self.bboxes:
+            if i['image_id'] == imgid:
+                info.append(i)
         img = self.api.loadImgs(imgid)[0]
         impath = os.path.join(self.imgdir, os.path.basename(img["coco_url"]))
         image = Image.open(impath)
