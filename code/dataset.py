@@ -93,12 +93,25 @@ class COCODataset(Dataset):
         self.api = COCO(anndir)
         self.imgids = self.api.getImgIds()
         self.transform = transform
+        bboxann = os.path.join(root_dir, ann_dir, "instances_{}.json".format(mod))
+        self.bboxes = []
+        self.idx2obj = {}
+        self.idx2supercats = {}
+        with open(bboxann, "r") as f:
+            self.ann = json.load(f)
+        for ann in self.ann['annotations']:
+            info = {'image_id' : ann['image_id'], 'obj_id' : ann['category_id'], 'bbox' : ann['bbox']}
+            self.bboxes.append(info)
+        for cat in self.ann['categories']:
+            self.idx2obj[cat['id']] = cat['name']
+            self.idx2supercats[cat['id']] = cat['supercategory']
 
     def __len__(self):
         return len(self.imgids)
 
     def __getitem__(self, idx):
         imgid = self.imgids[idx]
+        info = [i for i in self.bboxes if i['image_id'] == imgid]
         img = self.api.loadImgs(imgid)[0]
         impath = os.path.join(self.imgdir, os.path.basename(img["coco_url"]))
         image = Image.open(impath)
@@ -106,7 +119,7 @@ class COCODataset(Dataset):
         anns = self.api.loadAnns(annid)[0]["caption"]
         if self.transform is not None:
             image = self.transform(image)
-        sample = {'image' : image, 'caption' : anns}
+        sample = {'image' : image, 'caption' : anns, 'bboxinfo' : info}
         return sample
 
 
