@@ -69,7 +69,7 @@ class Captioning(nn.Module):
         input2 = torch.cat((v_hat, h_t1), 2)
         # h_t2 : (seq_length, batchsize, memdim)
         h_t2, _ = self.langlstm(input2)
-        # y_t : (seq_length, batchsize, vocab.size)
+        # y_t : (seq_length, batchsize, vocabsize)
         y_t = self.act(self.word(h_t2))
         return y_t
 
