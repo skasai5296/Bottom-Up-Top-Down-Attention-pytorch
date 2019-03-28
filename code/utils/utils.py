@@ -31,24 +31,26 @@ def collate_fn(samples):
 
 
 def xyxy2xywh(x1, y1, x2, y2):
-    x = (x2 + x1) // 2
-    y = (y2 + y1) // 2
-    w = x2 - x1
-    h = y2 - y1
+    x = (x1 + x2) // 2
+    y = (y1 + y2) // 2
+    w = x1 - x2
+    h = y1 - y2
     return x, y, w, h
 
 def xywh2xyxy(x, y, w, h):
-    x1 = int(x - w/2)
-    x2 = int(x + w/2)
-    y1 = int(y - h/2)
-    y2 = int(y + h/2)
+    x1 = int(x + w/2)
+    x2 = int(x - w/2)
+    y1 = int(y + h/2)
+    y2 = int(y - h/2)
     return x1, x2, y1, y2
 
 # function to compute IOU over two batches of bounding boxes.
 # input: (N, 4), (N, 4)
 def compute_iou(bbox1, bbox2):
-    b1_x1, b1_y1, b1_x2, b1_y2 = bbox1[:, 0], bbox1[:, 1], bbox1[:, 2], bbox1[:, 3]
-    b2_x1, b2_y1, b2_x2, b2_y2 = bbox2[:, 0], bbox2[:, 1], bbox2[:, 2], bbox2[:, 3]
+    b1_x, b1_y, b1_w, b1_h = bbox1[:, 0], bbox1[:, 1], bbox1[:, 2], bbox1[:, 3]
+    b2_x, b2_y, b2_w, b2_h = bbox2[:, 0], bbox2[:, 1], bbox2[:, 2], bbox2[:, 3]
+    b1_x1, b1_y1, b1_x2, b1_y2 = xywh2xyxy(b1_x, b1_y, b1_w, b1_h)
+    b2_x1, b2_y1, b2_x2, b2_y2 = xywh2xyxy(b2_x, b2_y, b2_w, b2_h)
 
     inter_x1 = torch.min(b1_x1, b2_x1)
     inter_y1 = torch.min(b1_y1, b2_y1)
@@ -58,11 +60,8 @@ def compute_iou(bbox1, bbox2):
     intersection = (inter_x1 - inter_x2 + 1) * (inter_y1 - inter_y2 + 1)
     print(intersection)
     b1_area = (b1_x1 - b1_x2 + 1) * (b1_y1 - b1_y2 + 1)
-    print(b1_area)
     b2_area = (b2_x1 - b2_x2 + 1) * (b2_y1 - b2_y2 + 1)
-    print(b2_area)
     union = b1_area + b2_area - intersection
-    print(union)
     return intersection / union
 
 # finds the grid that is responsible for bounding box detection
@@ -77,14 +76,30 @@ def get_grid_coord(S, bbox, imsize):
     tar_y = int(y_center // bin)
     return tar_x, tar_y
 
+
+# anchor : (B, 2)
+def scale_anchors(imsize, S, anchor):
+    bin = int(imsize / S)
+    scaled = anchor / bin
+    return scaled
+
+# anchor : (B, 2)
+# returns : (1, B, S, S)
+def position_anchors(S, anchor):
+    offset_x = torch.arange(S).repeat(S, 1).view(1, 1, S, S)
+    offset_y = torch.arange(S).repeat(S, 1).transpose().view(1, 1, S, S)
+    anchor_w, anchor_h = anchor.split(2, dim=1)
+    anchor_w = -
+
+
 # pred : (bs, B, 4, S, S)
-# anchor : (B, 4)
+# anchor : (B, 2)
 # confidence : (bs, 1)
 # labels : (bs, C)
-def create_target(S, anchor, pred, confidence, labels):
+def create_targets(x, y, w, h, conf, cls, anchor):
     bs, B, _, S, _ = pred.size()
     # pred : (bs, B, S*S, 4)
-    pred = pred.flatten(start_dim=-1).transpose(2, 3)
+    pred = pred.flatten(start_dim=-2).transpose(2, 3)
     for batch in range(bs):
         for bbid in range(B):
             # bbox : (S*S, 4)

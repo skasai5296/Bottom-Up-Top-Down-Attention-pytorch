@@ -57,6 +57,8 @@ def main(args):
     bceloss = nn.BCELoss()
     celoss = nn.CrossEntropyLoss()
 
+    anchors = torch.tensor([[10,13],  [16,30],  [33,23],  [30,61],  [62,45],  [59,119],  [116,90],  [156,198],  [373,326]]).to(device)
+
     print('begin training')
 
     for ep in range(args.epochs):
@@ -78,7 +80,8 @@ def main(args):
             im_ten = im_ten.to(device)
             """
 
-            out = yolo(im_ten)
+            out_x, out_y, out_w, out_h, out_conf, out_cls = yolo(im_ten)
+            a = utils.create_targets(args.S, anchors, out_x, out_y, out_w, out_h, out_conf, out_cls)
             print(im_ten.size())
             print(sample)
             break
