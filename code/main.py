@@ -59,8 +59,27 @@ def main(args):
 
     print('begin training')
 
-    for i in range(args.epochs):
+    for ep in range(args.epochs):
         for it, sample in enumerate(trainloader):
+            # sample contains 'image', 'captions', 'bboxinfo'
+            im_ten = sample['image']
+            info = sample['bboxinfo']
+            """
+            for objects in info:
+                bounding_boxes = []
+                classes = []
+                for bbinfo in objects:
+                    bounding_boxes.append(bbinfo['bbox'])
+                    classes.append(bbinfo['obj_id'])
+                bbs = torch.tensor(bounding_boxes)
+                cls = torch.tensor(classes)
+                print(bbs.size())
+                print(cls.size())
+            im_ten = im_ten.to(device)
+            """
+
+            out = yolo(im_ten)
+            print(im_ten.size())
             print(sample)
             break
         break
@@ -83,7 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epochs', type=int, default=100)
     parser.add_argument('-s', '--image_size', type=int, default=256)
     parser.add_argument('-b', '--batch_size', type=int, default=64)
-    parser.add_argument('-r', '--root_dir', type=str, default='../../dsets/coco/')
+    parser.add_argument('-r', '--root_dir', type=str, default='../../../hdd/dsets/coco/')
     parser.add_argument('-a', '--ann_dir', type=str, default='annotations/')
     parser.add_argument('-c', '--captionfile', type=str, default='../data/caption.txt')
     parser.add_argument('-m', '--multi_gpu', type=bool, default=True)

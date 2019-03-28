@@ -13,6 +13,8 @@ import torchvision
 
 from pycocotools.coco import COCO
 
+from utils import utils
+
 
 
 
@@ -88,8 +90,8 @@ transform : contain transformations for images (torchvision.Transforms)
 returns {'image' : PIL Image, 'caption' : string, 'bboxinfo' : [{'image_id' : integer index of image, 'obj_id' : integer index of object, 'bbox' : list containing xywh of bounding box}, ...] }
 """
 class COCODataset(Dataset):
-    def __init__(self, root_dir="../../dsets/coco/", ann_dir="annotations/", mode="train", transform=None):
-        mod = mode + "2014"
+    def __init__(self, root_dir="../../../hdd/dsets/coco/", ann_dir="annotations/", mode="train", transform=None):
+        mod = mode + "2017"
         self.imgdir = os.path.join(root_dir, mod)
         anndir = os.path.join(root_dir, ann_dir, "captions_{}.json".format(mod))
         self.api = COCO(anndir)
@@ -107,6 +109,7 @@ class COCODataset(Dataset):
         for cat in self.ann['categories']:
             self.idx2obj[cat['id']] = cat['name']
             self.idx2supercats[cat['id']] = cat['supercategory']
+        self.num_classes = len(self.idx2obj.keys())
 
     def __len__(self):
         return len(self.imgids)
@@ -116,10 +119,11 @@ class COCODataset(Dataset):
         info = []
         for i in self.bboxes:
             if i['image_id'] == imgid:
-                info.append(i)
+                a = {'obj_id' : i['obj_id'], 'bbox' : i['bbox']}
+                info.append(a)
         img = self.api.loadImgs(imgid)[0]
         impath = os.path.join(self.imgdir, os.path.basename(img["coco_url"]))
-        image = Image.open(impath)
+        image = Image.open(impath).convert('RGB')
         annid = self.api.getAnnIds(imgid)
         anns = self.api.loadAnns(annid)[0]["caption"]
         if self.transform is not None:
@@ -131,6 +135,7 @@ class COCODataset(Dataset):
 if __name__ == '__main__':
     c = COCODataset()
     print(c[0])
+    print(c.num_classes)
 
 
 

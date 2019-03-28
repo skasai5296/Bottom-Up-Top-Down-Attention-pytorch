@@ -41,7 +41,7 @@ class Down(nn.Module):
 
 """
 input : (bs, 3, imsize, imsize)
-output : (bs, B*(4+1+classnum), S, S)
+output : x1y1x2y2, conf, cls
 """
 class YOLOv3(nn.Module):
     def __init__(self, in_c=3, classnum=80, S=7, B=3, imsize=256, resnumbers=[1, 2, 8, 8, 4]):
@@ -49,6 +49,8 @@ class YOLOv3(nn.Module):
         self.model = nn.ModuleList()
         self.current_c = 32
         self.S = S
+        self.B = B
+        self.classnum = classnum
         self.out_c = B*(4+1+classnum)
         self.repeat = resnumbers
         self.current_im = imsize
@@ -69,7 +71,19 @@ class YOLOv3(nn.Module):
             x = layer(x)
         x = x.squeeze()
         x = self.model[-1](x)
-        return x.view(self.bs, self.out_c, self.S, self.S)
+        # out : (bs, B, S, S, 5+classnum)
+        out = x.view(self.bs, self.B, self.classnum+5, self.S, self.S).permute(0, 1, 3, 4, 2)
+        # out_x, out_y, out_w, out_h : (bs, B, S, S, 1)
+        # out_conf : (bs, B, S, S, 1)
+        # out_cls : (bs, B, S, S, classnum)
+        out_x, out_y, out_w, out_h, out_conf, out_cls = out.split([1, 1, 1, 1, 1, self.classnum], dim=-1)
+        # sigmoid except for w and h
+        out_x = torch.sigmoid(out_x)
+        out_y = torch.sigmoid(out_y)
+        out_conf = torch.sigmoid(out_conf)
+        out_cls = torch.sigmoid(out_cls)
+        return out_x, out_y, out_w, out_h, out_conf, out_cls
+
 
 """
 Region Proposal Network
