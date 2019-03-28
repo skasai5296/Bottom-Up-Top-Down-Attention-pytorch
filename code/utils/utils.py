@@ -85,11 +85,14 @@ def scale_anchors(imsize, S, anchor):
 
 # anchor : (B, 2)
 # returns : (1, B, S, S)
-def position_anchors(S, anchor):
+def position_anchors(imsize, S, anchor):
+    anchor_num = anchor.size(0)
+    bin = int(imsize / S)
     offset_x = torch.arange(S).repeat(S, 1).view(1, 1, S, S)
     offset_y = torch.arange(S).repeat(S, 1).transpose().view(1, 1, S, S)
     anchor_w, anchor_h = anchor.split(2, dim=1)
-    anchor_w = -
+    scaled_w = scale_anchors(anchor_w)
+    scaled_h = scale_anchors(anchor_h)
 
 
 # pred : (bs, B, 4, S, S)
