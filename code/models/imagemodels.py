@@ -1,6 +1,11 @@
+import sys, os
+
 import torch
 import torch.nn as nn
 import time
+
+sys.path.append(os.pardir)
+from utils import utils
 
 # Bottleneck layer.
 class Bottleneck(nn.Module):
@@ -44,7 +49,7 @@ input : (bs, 3, imsize, imsize)
 output : x1y1x2y2, conf, cls
 """
 class YOLOv3(nn.Module):
-    def __init__(self, in_c=3, classnum=80, S=7, B=3, imsize=256, resnumbers=[1, 2, 8, 8, 4]):
+    def __init__(self, in_c=3, classnum=80, S=7, B=9, imsize=256, resnumbers=[1, 2, 8, 8, 4]):
         super(YOLOv3, self).__init__()
         self.model = nn.ModuleList()
         self.current_c = 32
@@ -82,6 +87,7 @@ class YOLOv3(nn.Module):
         out_y = torch.sigmoid(out_y)
         out_conf = torch.sigmoid(out_conf)
         out_cls = torch.sigmoid(out_cls)
+        print(out_x.size(), out_y.size(), out_w.size(), out_h.size(), out_conf.size(), out_cls.size())
         return out_x, out_y, out_w, out_h, out_conf, out_cls
 
 

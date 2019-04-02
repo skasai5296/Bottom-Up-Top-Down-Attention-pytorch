@@ -66,7 +66,7 @@ def compute_iou(bbox1, bbox2):
 
 # finds the grid that is responsible for bounding box detection
 # S: number of grids
-# bbox: (4)
+# bbox: (4), x1y1x2y2
 def get_grid_coord(S, bbox, imsize):
     # bin of pixels for each grid cell
     bin = imsize // S
@@ -77,53 +77,61 @@ def get_grid_coord(S, bbox, imsize):
     return tar_x, tar_y
 
 
-# anchor : (B, 2)
+# function to scale anchor widths and heights
+# anchor : (B, 1)
 def scale_anchors(imsize, S, anchor):
     bin = int(imsize / S)
     scaled = anchor / bin
     return scaled
 
-# anchor : (B, 2)
-# returns : (1, B, S, S)
-def position_anchors(imsize, S, anchor):
-    anchor_num = anchor.size(0)
+
+# function to offset predicted bounding boxes by grid
+# x, y, w, h, conf : (bs, B, S, S, 1)
+# cls : (bs, B, S, S, *)
+# scaled_anchor : (B, 2)
+# returns : (bs, B, S, S, 1), xywh
+def offset_boxes(x, y, w, h, device, imsize, S, scaled_anchor):
+    anchor_num = x.size(1)
     bin = int(imsize / S)
-    offset_x = torch.arange(S).repeat(S, 1).view(1, 1, S, S)
-    offset_y = torch.arange(S).repeat(S, 1).transpose().view(1, 1, S, S)
-    anchor_w, anchor_h = anchor.split(2, dim=1)
-    scaled_w = scale_anchors(anchor_w)
-    scaled_h = scale_anchors(anchor_h)
+    # offsets : (1, 1, S, S, 1)
+    offset_x = torch.arange(S, dtype=x.dtype, device=device).repeat(S, 1).view(1, 1, S, S, 1)
+    offset_y = offset_x.clone().transpose(0, 1)
+    anchor_w, anchor_h = scaled_anchor[:, 0], scaled_anchor[:, 1]
+    # scaled : (1, B, 1, 1)
+    scaled_w = anchor_w.view(1, anchor_num, 1, 1, 1)
+    scaled_h = anchor_h.view(1, anchor_num, 1, 1, 1)
+    # pred : (bs, B, S, S, 1)
+    pred_x = x.new_empty(x.size())
+    pred_y = x.clone()
+    pred_w = x.clone()
+    pred_h = x.clone()
+    print(w.size(), scaled_w.size())
+
+    pred_x = x + offset_x
+    pred_y = y + offset_y
+    pred_w = torch.exp(w) * scaled_w
+    pred_h = torch.exp(h) * scaled_h
+    return pred_x, pred_y, pred_w, pred_h
 
 
-# pred : (bs, B, 4, S, S)
-# anchor : (B, 2)
+# x, y, w, h, conf, cls : (bs, B, S, S, 1)
+# anchors : (B, 2)
 # confidence : (bs, 1)
 # labels : (bs, C)
-def create_targets(x, y, w, h, conf, cls, anchor):
-    bs, B, _, S, _ = pred.size()
-    # pred : (bs, B, S*S, 4)
-    pred = pred.flatten(start_dim=-2).transpose(2, 3)
+def create_targets(device, anchors, x, y, w, h, conf, cls, imsize=256):
+    bs, B, S, _, _ = x.size()
     for batch in range(bs):
         for bbid in range(B):
             # bbox : (S*S, 4)
-            bbox = pred[bs, bbid, :, :]
-            anc = anchor[bbid, :].expand_as(bbox)
             # iou : (S*S)
-            iou = compute_iou(bbox, anc)
             # maxim : (1)
-            maxim = torch.argmax(iou)
-            tar_x = maxim % S
-            tar_y = maxim // S
-            sx, sy = get_grid_coord(bbox[idx])
-            mask[:, bbid, sx, sy] = 1
-            conf[:, bbid, sx, sy]
+            pass
 
 
 if __name__ == '__main__':
     b1 = torch.tensor([[1.0, 1.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0]])
     b2 = torch.tensor([[2.0, 2.0, 0.0, 0.0], [10.0, 10.0, 0.0, 0.0]])
     print(compute_iou(b1, b2))
-
     output = torch.randn(2, 95, 7, 7)
-    make_targets(output, bboxes, confidences, classes)
+    create_targets(output, bboxes, confidences, classes)
 

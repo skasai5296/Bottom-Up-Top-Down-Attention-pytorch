@@ -57,14 +57,15 @@ def main(args):
     bceloss = nn.BCELoss()
     celoss = nn.CrossEntropyLoss()
 
-    anchors = torch.tensor([[10,13],  [16,30],  [33,23],  [30,61],  [62,45],  [59,119],  [116,90],  [156,198],  [373,326]]).to(device)
+    anchors = torch.tensor([[10,13],  [16,30],  [33,23],  [30,61],  [62,45],  [59,119],  [116,90],  [156,198],  [373,326]], dtype=torch.float).to(device)
+    scaled_anchors = utils.scale_anchors(args.image_size, args.grid_size, anchors)
 
     print('begin training')
 
     for ep in range(args.epochs):
         for it, sample in enumerate(trainloader):
             # sample contains 'image', 'captions', 'bboxinfo'
-            im_ten = sample['image']
+            im_ten = sample['image'].to(device)
             info = sample['bboxinfo']
             """
             for objects in info:
@@ -80,10 +81,8 @@ def main(args):
             im_ten = im_ten.to(device)
             """
 
-            out_x, out_y, out_w, out_h, out_conf, out_cls = yolo(im_ten)
-            a = utils.create_targets(args.S, anchors, out_x, out_y, out_w, out_h, out_conf, out_cls)
-            print(im_ten.size())
-            print(sample)
+            x, y, w, h, pred_conf, pred_cls = yolo(im_ten)
+            pred_x, pred_y, pred_w, pred_h = utils.offset_boxes(x, y, w, h, device, args.image_size, args.grid_size, scaled_anchors)
             break
         break
 
@@ -105,6 +104,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epochs', type=int, default=100)
     parser.add_argument('-s', '--image_size', type=int, default=256)
     parser.add_argument('-b', '--batch_size', type=int, default=64)
+    parser.add_argument('-gs', '--grid_size', type=int, default=7)
     parser.add_argument('-r', '--root_dir', type=str, default='../../../hdd/dsets/coco/')
     parser.add_argument('-a', '--ann_dir', type=str, default='annotations/')
     parser.add_argument('-c', '--captionfile', type=str, default='../data/caption.txt')
